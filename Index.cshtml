@@ -1,0 +1,69 @@
+@{
+    ViewData["Title"] = "Property Locking System";
+}
+
+<div class="container">
+    <h1>Property Locking System</h1>
+    <div id="properties">
+        <!-- Example properties -->
+        <div class="property" data-id="prop1">
+            <h3>Property 1</h3>
+            <p id="status-prop1">Unlocked</p>
+            <button id="lock-prop1" class="btn btn-primary">Lock</button>
+            <button id="unlock-prop1" class="btn btn-secondary" disabled>Unlock</button>
+        </div>
+        <div class="property" data-id="prop2">
+            <h3>Property 2</h3>
+            <p id="status-prop2">Unlocked</p>
+            <button id="lock-prop2" class="btn btn-primary">Lock</button>
+            <button id="unlock-prop2" class="btn btn-secondary" disabled>Unlock</button>
+        </div>
+    </div>
+    <div id="messages"></div>
+</div>
+
+@section Scripts {
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/propertyLockHub")
+            .build();
+
+        connection.on("PropertyLocked", (propertyId, userId) => {
+            document.getElementById(`status-${propertyId}`).textContent = `Locked by ${userId}`;
+            document.getElementById(`lock-${propertyId}`).disabled = true;
+            document.getElementById(`unlock-${propertyId}`).disabled = false;
+        });
+
+        connection.on("PropertyUnlocked", (propertyId, userId) => {
+            document.getElementById(`status-${propertyId}`).textContent = "Unlocked";
+            document.getElementById(`lock-${propertyId}`).disabled = false;
+            document.getElementById(`unlock-${propertyId}`).disabled = true;
+        });
+
+        connection.on("LockFailed", (propertyId, message) => {
+            document.getElementById("messages").innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        });
+
+        connection.on("UnlockFailed", (propertyId, message) => {
+            document.getElementById("messages").innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        });
+
+        connection.start().catch(err => console.error(err.toString()));
+
+        document.querySelectorAll('.property button[id^="lock-"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const propertyId = button.id.replace('lock-', '');
+                const userId = 'User' + Math.floor(Math.random() * 1000); // Simulate user ID
+                connection.invoke("LockProperty", propertyId, userId);
+            });
+        });
+
+        document.querySelectorAll('.property button[id^="unlock-"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const propertyId = button.id.replace('unlock-', '');
+                const userId = 'User' + Math.floor(Math.random() * 1000); // Simulate user ID
+                connection.invoke("UnlockProperty", propertyId, userId);
+            });
+        });
+    </script>
+}
